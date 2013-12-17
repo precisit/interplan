@@ -1,6 +1,7 @@
 import tornado.ioloop
 import tornado.web
 from tornado.web import HTTPError
+import sys
 import signal
 import logging
 import logging.config 
@@ -22,8 +23,28 @@ class PingHandler(tornado.web.RequestHandler):
         LOGGER.info('Got ping, replying pong')
         self.write('pong')
 
+class StaticHandler(tornado.web.RequestHandler):
+    def get(self, resource):
+        if resource is None or resource == '':
+            resource = 'index.html'
+        LOGGER.info('Got request for page: ' + resource)
+        
+        try: 
+            with open('static/' + resource, mode='r') as file:
+                if '.css' in resource:
+                    self.set_header('Content-Type', 'text/css')
+                if '.js' in resource:
+                    self.set_header('Content-Type', 'text/javascript')
+                self.write(file.read())
+        except:
+            e = sys.exc_info()
+            LOGGER.error('StaticHandler: Exception %s %s' % (e[0],e[1]))
+            self.write('404: File not found: ' + resource)
+            raise HTTPError(404)
+                
 backend = tornado.web.Application([
     (r"/ping", PingHandler),
+    (r"/(.*)", StaticHandler),
 ])
 
 class Manager(object):
