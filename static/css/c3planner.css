@@ -1,0 +1,13 @@
+body {
+  padding-top: 70px;
+}
+
+path {
+  stroke: #000;
+  stroke-width: .5px;
+  fill: #39c;
+}
+
+circle {
+  fill: #39c;
+}
