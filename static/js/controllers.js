@@ -9,7 +9,7 @@ angular.module('c3App.controllers', ['c3App.services', 'ui.bootstrap'])
 		$scope.maxTT = 240;
 
 		$scope.objects = function(searchString) {
-				return $http.get("http://localhost:8080/rest/v1/objectSearch/"+searchString).then(function(response){
+				return $http.get("rest/v1/objectSearch/"+searchString).then(function(response){
 					return response.data;
 			});
 		}
