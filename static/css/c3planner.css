@@ -1,5 +1,13 @@
 body {
-  padding-top: 70px;
+  padding-top: 20px;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus {
+    outline: none;
+    outline: 0;
 }
 
 path {

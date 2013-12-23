@@ -1,16 +1,41 @@
-Message: {{model.message}}
 
-<input type="text" class="form-control" placeholder="Planet A">
-<input type="text" class="form-control" placeholder="Planet B">
-<input type="text" class="form-control" placeholder="Launch Window
-Start">
-<input type="text" class="form-control" placeholder="Launch Window End">
-<input type="text" class="form-control" placeholder="Arrival Window
-Start">
-<input type="text" class="form-control" placeholder="Arrival Window
-End">
+<form class="form-inline" name="plotSetup" ng-controller="c3PlotFormCtrl" ng-submit="postJobRequest()">
+    <!--<pre>Model: {{departure| json}}</pre>
+    <pre>Model: {{destination| json}}</pre>-->
+    <div class="form-group" ng-class="{'has-success': departure['_id']}">
+      <input class="form-control" name="departure" type="text" ng-model="departure" typeahead="object as object.full_name for object in objects($viewValue) | filter:$viewValue | limitTo:8" placeholder="Departure" required>
+    </div>
 
-<div id="c3PlotArea">
+    <div class="form-group" ng-class="{'has-success': destination['_id']}">
+      <input class="form-control" name="destination" type="text" ng-model="destination" typeahead="object as object.full_name for object in objects($viewValue) | filter:$viewValue | limitTo:8" placeholder="Destination" required>
+    </div>
+
+    <div class="form-group" ng-class="{'has-error': plotSetup.start.$invalid}">
+      <input class="form-control" name="start" data-provide="datepicker" placeholder="Depart window start" data-date-format="yyyy-mm-dd" ng-model="windowStart">
+    </div>
+
+    <div class="form-group" ng-class="{'has-error': plotSetup.stop.$invalid}">
+      <input class="form-control" name="stop" data-provide="datepicker" placeholder="Depart window end" data-date-format="yyyy-mm-dd" ng-model="windowStop">
+    </div>
+
+    <div class="form-group" ng-class="{'has-error': plotSetup.minTT.$invalid}">
+      <input class="form-control" name="minTT" type="number" ng-model="minTT" min="30" max="2000" step="10" required>
+    </div>
+
+    <div class="form-group" ng-class="{'has-error': plotSetup.maxTT.$invalid}">
+      <input class="form-control" name="maxTT" type="number" ng-model="maxTT" min="60" max="2500" step="10" required>
+    </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary" ng-disabled="plotSetup.$invalid">Plot C3</button>
+    </div>
+</form>
+
+<!--Datepicker alternative: http://mgcrea.github.io/angular-strap/#/datepicker -->
+
+<!--TODO: Figure out how to connect to jsFlow ANGULARTASTIC, figure out how to handle incoming data and generate plots -->
+
+<div id="c3PlotArea" style="margin-top: 20px">
 </div>
 
     <script type="text/javascript">

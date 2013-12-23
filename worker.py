@@ -17,6 +17,14 @@ mongoClient = MongoClient('mongodb://localhost:27017/')
 db = mongoClient['interplan']
 objects = db.objects
 
+#TODO: Write lightweight library for storing auth info + sending/recieving info using REST 
+#Question: Possible to make functions become non-blocking (long polling), calling a function when resuts are ready?? 
+# 1) Get planet / asteroid inf
+# 2) Set up the calculations (dates, etc)
+# 3) Perform calculations and every 1% report status + latest pixels to QUEUE
+# 4) Future: Cache orbital results. 
+# 5) Replace SQS Longpolling and REST Post through my server to a WEBSOCKET interface in Python OR a REST CALLBACK solution in Python (better??) - REST call to tell server I'm ready to recieve.
+
 #DynamoDBConn = boto.dynamodb.connect_to_region('eu-west-1')
 conn = boto.sqs.connect_to_region('eu-west-1')
 jobQueue = conn.create_queue('interplanJobQueue')
