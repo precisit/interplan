@@ -6,7 +6,7 @@ angular.module('c3App.controllers', ['c3App.services', 'ui.bootstrap'])
 		$scope.windowStart = undefined;
 		$scope.windowStop = undefined;
 		$scope.minTT = 120;
-		$scope.maxTT = 240;
+		$scope.maxTT = 400;
 
 		$scope.objects = function(searchString) {
 				return $http.get("rest/v1/objectSearch/"+searchString).then(function(response){
@@ -15,15 +15,18 @@ angular.module('c3App.controllers', ['c3App.services', 'ui.bootstrap'])
 		}
 
 		$scope.postJobRequest = function() {
+			//TODO: Generate RANDOM number / ID on this calculation
 			postData = {
-				"fromId": 'myuserid',
+				"fromId": $("#c3Form input[name='myuserid']").val(),
 				"departure": $scope.departure,
 				"destination": $scope.destination,
-				"windowStart": $scope.windowStart,
-				"windowStop": $scope.windowStop,
+				"windowStart": $("#c3Form input[name='start']").val(),
+				"windowStop": $("#c3Form input[name='stop']").val(),
 				"minTT": $scope.minTT,
 				"maxTT": $scope.maxTT
 			}
+
+			console.log(postData);
 
 			JobRequest.save({}, postData);
 		}

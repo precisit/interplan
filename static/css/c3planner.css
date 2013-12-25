@@ -11,11 +11,8 @@ button:focus {
 }
 
 path {
-  stroke: #000;
-  stroke-width: .5px;
-  fill: #39c;
+  stroke-width: 1px;
 }
 
 circle {
-  fill: #39c;
 }
