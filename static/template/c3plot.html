@@ -40,6 +40,9 @@
 <div id="c3PlotArea" style="margin-top: 20px">
 </div>
 
+<div id="depart"></div>
+<div id="arrive"></div>
+<br><br>
     <script type="text/javascript">
 
 var w = 960,
@@ -75,12 +78,14 @@ var color = d3.scale.linear()
    .range(["#c7090c", "#e7191c", "#ffffbf", "#2c7bb6"])
    .interpolate(d3.interpolateHcl);
 
-var svg = d3.select("#c3PlotArea")
+var svgBase = d3.select("#c3PlotArea")
   .append("svg")
 //    .attr('preserveAspectRatio', 'xMidYMid')
 //    .attr('viewBox', '0 0 950 500')
     .attr("width", width)
-    .attr("height", width*aspect)
+    .attr("height", width*aspect);
+
+var svg = svgBase
     .append('g');
 //    .attr("class", "Blues");
 
@@ -92,6 +97,24 @@ this.svg.append("svg:clipPath")
 
 var voronoi = d3.geom.voronoi()
     .clipExtent([[0, 0], [width-20, width*aspect-20]]);
+
+var legendGroup = svgBase.append('g');
+
+var legendBox = legendGroup.append('rect')
+  .attr({rx: 5, ry: 5, visibility: 'hidden'})
+  .style('fill', 'white')
+  .style('stroke', 'steelblue')
+  .style('pointer-events', 'none')
+  .style('stroke-width', '0.1em');
+  
+var legendText = legendGroup.append('text')
+  .attr('visibility', 'hidden')
+  .style('text-anchor', 'middle')
+  .style('pointer-events', 'none')
+  .text('test')
+  .attr('dy', '0.71em')
+  .attr('font-size','14px')
+  .style('fill', 'steelblue');
 
 /*
 $(window).resize(function() {
@@ -156,6 +179,10 @@ max = [0,0];
 velocity = [10000,0.000001];
 
 jsFlow.addHandler('dataPoint',function (payload){
+
+  var startDate = new Date($("#c3Form input[name='start']").val());
+  var tmpDate = new Date($("#c3Form input[name='start']").val());
+
   //console.log('Got payload from user "'+from+'" on channel "'+channel_id+'": ', payload);
   //console.log('PAYLOAD: ', payload);
 
@@ -175,14 +202,14 @@ jsFlow.addHandler('dataPoint',function (payload){
     if(payload[i][1] < velocity[0])
       velocity[0] = payload[i][1]
   }
-  console.log('values', velocity);
-  console.log('IMPORTANT: ', min, max);
+  //console.log('values', velocity);
+  //console.log('IMPORTANT: ', min, max);
 
   xScale.domain([min[0], max[0]]);
-  console.log('x', min[0], max[0]);
+  //console.log('x', min[0], max[0]);
 
   yScale.domain([min[1], max[1]]);
-  console.log('y', min[1], max[1]);
+  //console.log('y', min[1], max[1]);
   
   //color = d3.scale.linear().domain([min[1], max[1]]).range(['red', 'blue']);
   group = d3.scale.log().domain(velocity).range([1,19]);
@@ -207,7 +234,7 @@ jsFlow.addHandler('dataPoint',function (payload){
       maxForKey[groupIndex] = verticesRaw[i][1];
   }
 
-  console.log(vertices);
+  //console.log(vertices);
 
   //svg.selectAll('circle').remove();
   voronoiVertices = verticesRaw.map(function(o){return [xScale(o[0][0]),  yScale(o[0][1])]})
@@ -218,7 +245,28 @@ jsFlow.addHandler('dataPoint',function (payload){
     path.enter().append('path')
       .attr('stroke', function(d, i) {return color(verticesRaw[i][1])})
       .attr('fill', function(d, i) {return color(verticesRaw[i][1])})
-      .attr('d', polygon);
+      .attr('d', polygon)
+      .on('mousemove', function(d, i) {
+        legendGroup.attr({transform: 'translate('+d3.event.offsetX+','+(d3.event.offsetY-20)+')'});
+      })
+      .on('mouseover', function(d, i) {
+        //Date div
+        tmpDate = new Date($("#c3Form input[name='start']").val());
+        tmpDate.setDate(startDate.getDate() + verticesRaw[i][0][0]);
+        $('div#depart').html('Depart: ' + tmpDate.toLocaleDateString());
+        tmpDate = new Date($("#c3Form input[name='start']").val());
+        tmpDate.setDate(startDate.getDate() + verticesRaw[i][0][0] + verticesRaw[i][0][1]);
+        $('div#arrive').html('Arrive: ' + tmpDate.toLocaleDateString());
+
+        legendText.attr({visibility: 'visible'}).text('C3: ' + verticesRaw[i][1]);
+        var bbox = legendText.node().getBBox();
+        var bm = [4, 1, 4, 2];
+        legendBox.attr({visibility: 'visible', x: bbox.x-bm[0], y: bbox.y-bm[1], width: bbox.width+bm[0]+bm[2], height: bbox.height+bm[1]+bm[3]});            
+      })
+      .on('mouseout', function(d, i) {
+        legendText.attr({visibility: 'hidden'}).text('');
+        legendBox.attr({visibility: 'hidden'});
+      });
 
     path.order();
 

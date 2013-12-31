@@ -9,6 +9,7 @@ from PyKEP import *
 
 #General
 import json
+import sys
 
 #Boto
 import boto
@@ -62,87 +63,91 @@ while True:
 	if m is not None:
 		data = json.loads(m.get_body())
 		jobQueue.delete_message(m)
-		print 'Got new Job Request: ', data
-		dep = db.objects.find_one({'_id': ObjectId(data['departure']['_id'])})
-		des = db.objects.find_one({'_id': ObjectId(data['destination']['_id'])})
 
-		depDia = 10.0;
-		if dep['diameter']:
-			depDia = float(dep['diameter']) / 2.0
-		checkData(dep)
-		depObject = planet(epoch(float(dep['epoch_mjd']),epoch.epoch_type.MJD), (float(dep['a']) * AU, float(dep['e']), float(dep['i'])*DEG2RAD, float(dep['om'])*DEG2RAD, float(dep['w'])*DEG2RAD, float(dep['ma'])*DEG2RAD), MU_SUN, 0.001 + float(dep['GM']), depDia, depDia*1.1)
+		try: 
+			print 'Got new Job Request: ', data
+			dep = db.objects.find_one({'_id': ObjectId(data['departure']['_id'])})
+			des = db.objects.find_one({'_id': ObjectId(data['destination']['_id'])})
 
-		desDia = 100;
-		if des['diameter']:
-			desDia = float(des['diameter']) / 2.0
-		checkData(des)
-		desObject = planet(epoch(float(des['epoch_mjd']),epoch.epoch_type.MJD), (float(des['a']) * AU, float(des['e']), float(des['i'])*DEG2RAD, float(des['om'])*DEG2RAD, float(des['w'])*DEG2RAD, float(des['ma'])*DEG2RAD), MU_SUN, 0.001 + float(des['GM']), desDia, desDia*1.1)
+			depDia = 10.0;
+			if dep['diameter']:
+				depDia = float(dep['diameter']) / 2.0
+			checkData(dep)
+			depObject = planet(epoch(float(dep['epoch_mjd']),epoch.epoch_type.MJD), (float(dep['a']) * AU, float(dep['e']), float(dep['i'])*DEG2RAD, float(dep['om'])*DEG2RAD, float(dep['w'])*DEG2RAD, float(dep['ma'])*DEG2RAD), MU_SUN, 0.001 + float(dep['GM']), depDia, depDia*1.1)
 
-		#TODO: Remove verification ??? OR KEEP IT LOGS - KEWLT 
-		print depObject, desObject
+			desDia = 100;
+			if des['diameter']:
+				desDia = float(des['diameter']) / 2.0
+			checkData(des)
+			desObject = planet(epoch(float(des['epoch_mjd']),epoch.epoch_type.MJD), (float(des['a']) * AU, float(des['e']), float(des['i'])*DEG2RAD, float(des['om'])*DEG2RAD, float(des['w'])*DEG2RAD, float(des['ma'])*DEG2RAD), MU_SUN, 0.001 + float(des['GM']), desDia, desDia*1.1)
 
-		start = datetime.strptime(data['windowStart'], '%Y-%m-%d')
-		start -= timedelta(days=1)
-		stop = datetime.strptime(data['windowStop'], '%Y-%m-%d')
-		stop += timedelta(days=1)
-		windowDuration = (stop-start).days
-		travelMin = data['minTT']
-		travelMax = data['maxTT']
+			#TODO: Remove verification ??? OR KEEP IT LOGS - KEWLT 
+			print depObject, desObject
 
-		print 'start time: ',start
-		print 'end time',stop
-		print 'duration: ', windowDuration
+			start = datetime.strptime(data['windowStart'], '%Y-%m-%d')
+			start -= timedelta(days=1)
+			stop = datetime.strptime(data['windowStop'], '%Y-%m-%d')
+			stop += timedelta(days=1)
+			windowDuration = (stop-start).days
+			travelMin = data['minTT']
+			travelMax = data['maxTT']
 
-		dataBuf = []
-		calcCounter = 0;
+			print 'start time: ',start
+			print 'end time',stop
+			print 'duration: ', windowDuration
 
-		for windowDay in range(0,windowDuration/resFactor):
-			t0 = start + timedelta(days=resFactor*windowDay)
-			epoch0 = epoch_from_string(t0.isoformat(' '))
+			dataBuf = []
+			calcCounter = 0;
 
-			for missionDay in range(travelMin/resFactor, travelMax/resFactor):
-				t1 = t0 + timedelta(days=resFactor*missionDay)
-				epoch1 = epoch_from_string(t1.isoformat(' '))
-				transitTime = epoch1.mjd2000 - epoch0.mjd2000
+			for windowDay in range(0,windowDuration/resFactor):
+				t0 = start + timedelta(days=resFactor*windowDay)
+				epoch0 = epoch_from_string(t0.isoformat(' '))
 
-				r0, v0 = depObject.eph(epoch0)
-				r1, v1 = desObject.eph(epoch1)
+				for missionDay in range(travelMin/resFactor, travelMax/resFactor):
+					t1 = t0 + timedelta(days=resFactor*missionDay)
+					epoch1 = epoch_from_string(t1.isoformat(' '))
+					transitTime = epoch1.mjd2000 - epoch0.mjd2000
 
-				l = lambert_problem(r0, r1, transitTime*DAY2SEC, MU_SUN)
-				depV = l.get_v1()
+					r0, v0 = depObject.eph(epoch0)
+					r1, v1 = desObject.eph(epoch1)
 
-				dv = tuple(map(operator.sub, depV[0], v0))
-				depRelV = 0
-				for x in dv:
-					depRelV += x*x
-				depRelV = math.sqrt(depRelV)
-				depC3 = depRelV**2/1000.0**2
+					l = lambert_problem(r0, r1, transitTime*DAY2SEC, MU_SUN)
+					depV = l.get_v1()
 
-				outData = [ [ windowDay*resFactor, missionDay*resFactor ], round(depC3,1) ]
-				dataBuf.append(outData)
+					dv = tuple(map(operator.sub, depV[0], v0))
+					depRelV = 0
+					for x in dv:
+						depRelV += x*x
+					depRelV = math.sqrt(depRelV)
+					depC3 = depRelV**2/1000.0**2
 
-				calcCounter += 1
+					outData = [ [ windowDay*resFactor, missionDay*resFactor ], round(depC3,1) ]
+					dataBuf.append(outData)
 
-				#TODO: PERCENTAGE COUNTER MESSAGES 
-				if calcCounter%100 == 0:
-					print 100.0*windowDay*resFactor/windowDuration
-					try:
-						print 'WILL SEND A'
-						response = http_client.fetch(httpclient.HTTPRequest(url="https://api.jsflow.com/v1/user/%s/%s" % (data['fromId'], 'dataPoint'), method='POST', body=json.dumps(dataBuf), validate_cert=False, auth_username='0d0bc8630706bf0fc8c1e9a2', auth_password='4qKcmmFCOjliJ7I1S6CkbsGnR8Q='))
-						print response.body
-					except httpclient.HTTPError, e:
-					    print "Error:", e
-					dataBuf = []
-			
-		print 'done!'
+					calcCounter += 1
 
-		try:
-			print 'WILL SEND B'
-			response = http_client.fetch(httpclient.HTTPRequest(url="https://api.jsflow.com/v1/user/%s/%s" % (data['fromId'], 'dataPoint'), method='POST', body=json.dumps(dataBuf), validate_cert=False, auth_username='0d0bc8630706bf0fc8c1e9a2', auth_password='4qKcmmFCOjliJ7I1S6CkbsGnR8Q='))
-			print response.body
-		except httpclient.HTTPError, e:
-		    print "Error:", e
+					#TODO: PERCENTAGE COUNTER MESSAGES 
+					if calcCounter%100 == 0:
+						print 100.0*windowDay*resFactor/windowDuration
+						try:
+							print 'WILL SEND A'
+							response = http_client.fetch(httpclient.HTTPRequest(url="https://api.jsflow.com/v1/user/%s/%s" % (data['fromId'], 'dataPoint'), method='POST', body=json.dumps(dataBuf), validate_cert=False, auth_username='0d0bc8630706bf0fc8c1e9a2', auth_password='4qKcmmFCOjliJ7I1S6CkbsGnR8Q='))
+							print response.body
+						except httpclient.HTTPError, e:
+						    print "Error:", e
+						dataBuf = []
+				
+			print 'done!'
 
+			try:
+				print 'WILL SEND B'
+				response = http_client.fetch(httpclient.HTTPRequest(url="https://api.jsflow.com/v1/user/%s/%s" % (data['fromId'], 'dataPoint'), method='POST', body=json.dumps(dataBuf), validate_cert=False, auth_username='0d0bc8630706bf0fc8c1e9a2', auth_password='4qKcmmFCOjliJ7I1S6CkbsGnR8Q='))
+				print response.body
+			except httpclient.HTTPError, e:
+			    print "Error:", e
+		except: 
+			e = sys.exc_info()
+			print ('Error processing job. Exception %s %s' % (e[0],e[1]))
 
 
 
