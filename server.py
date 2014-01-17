@@ -32,7 +32,7 @@ objects = db.objects
 
 #DynamoDBConn = boto.dynamodb.connect_to_region('eu-west-1')
 conn = boto.sqs.connect_to_region('eu-west-1')
-jobQueue = conn.create_queue('interplanJobQueue')
+jobQueue = None
 
 #Set up logging
 logging.config.fileConfig('logging.conf')
@@ -74,12 +74,16 @@ class RestObjectSearchHandler(tornado.web.RequestHandler):
             self.write(json.dumps(result))
             return None
         try: 
-            if searchString.isdigit(): 
-                for post in db.objects.find({"number": re.compile('^'+searchString.lower())}).limit(20):
-                    result.append({"_id": str(post['_id']), "full_name": post['full_name']})
-            else:
-                for post in db.objects.find({"name": re.compile('^'+searchString.lower())}).limit(20):
-                    result.append({"_id": str(post['_id']), "full_name": post['full_name']})
+            for post in db.objects.find({"full_name": re.compile('^'+searchString)}).limit(20):
+                result.append({"_id": str(post['_id']), "full_name": post['full_name']})
+            for post in db.objects.find({"name": re.compile('^'+searchString.lower())}).limit(20):
+                result.append({"_id": str(post['_id']), "full_name": post['full_name']})
+#            if searchString.isdigit(): 
+#                for post in db.objects.find({"number": re.compile('^'+searchString.lower())}).limit(20):
+#                    result.append({"_id": str(post['_id']), "full_name": post['full_name']})
+#            else:
+#                for post in db.objects.find({"name": re.compile('^'+searchString.lower())}).limit(20):
+#                    result.append({"_id": str(post['_id']), "full_name": post['full_name']})
         except: 
             e = sys.exc_info()
             LOGGER.error('RestObjectSearchHandler: Exception: %s %s' % (e[0],e[1]))
@@ -121,7 +125,13 @@ if __name__ == "__main__":
     backend.conf = Empty()
     backend.conf.externalPort = int(config['server']['port'])
     backend.conf.externalSecurePort = int(config['server']['sslPort'])
+    backend.conf.devMode = bool(config['server']['devMode'])
     
+    if backend.conf.devMode is True:
+        jobQueue = conn.create_queue('interplanJobQueueDev')
+    else:
+        jobQueue = conn.create_queue('interplanJobQueue')
+
     ioloop = tornado.ioloop.IOLoop.instance()
     
     backend.manager = Manager(ioloop)

@@ -7,6 +7,8 @@ angular.module('c3App.controllers', ['c3App.services', 'ui.bootstrap'])
 		$scope.windowStop = undefined;
 		$scope.minTT = 120;
 		$scope.maxTT = 400;
+		$scope.days = 100;
+		$scope.counter = 0;
 
 		$scope.objects = function(searchString) {
 				return $http.get("rest/v1/objectSearch/"+searchString).then(function(response){
@@ -15,6 +17,10 @@ angular.module('c3App.controllers', ['c3App.services', 'ui.bootstrap'])
 		}
 
 		$scope.postJobRequest = function() {
+			//Reset the c3 plot function (YES, THIS IS UGLY - need to convert to Angular JS way of data models)
+			window.resetc3PlotData();
+			$scope.counter++; 
+
 			//TODO: Generate RANDOM number / ID on this calculation
 			postData = {
 				"fromId": $("#c3Form input[name='myuserid']").val(),

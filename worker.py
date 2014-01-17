@@ -18,6 +18,7 @@ from boto.sqs.message import Message
 
 #Tornado (initially blocking HTTP requests, later vision is to have calculations nonblocking in ioloop)
 import tornado.httpclient as httpclient
+from configobj import ConfigObj
 
 #MongdoDB
 import pymongo
@@ -28,6 +29,9 @@ from bson.objectid import ObjectId
 mongoClient = MongoClient('mongodb://localhost:27017/')
 db = mongoClient['interplan']
 objects = db.objects
+
+#Get config
+config = ConfigObj('server.conf')
 
 #TODO: Write lightweight library for storing auth info + sending/recieving info using REST 
 #Question: Possible to make functions become non-blocking (long polling), calling a function when resuts are ready?? 
@@ -44,7 +48,10 @@ http_client = httpclient.HTTPClient()
 
 #Set up AWS SQS
 conn = boto.sqs.connect_to_region('eu-west-1')
-jobQueue = conn.create_queue('interplanJobQueue')
+if bool(config['server']['devMode']) is True: 
+	jobQueue = conn.create_queue('interplanJobQueueDev')
+else: 
+	jobQueue = conn.create_queue('interplanJobQueue')
 
 #Function to validate incoming data and add zeroes where needed
 required = ['epoch_mjd', 'a', 'e', 'i', 'om', 'w', 'ma', 'GM']
@@ -113,6 +120,7 @@ while True:
 
 					l = lambert_problem(r0, r1, transitTime*DAY2SEC, MU_SUN)
 					depV = l.get_v1()
+					arrV = l.get_v2()
 
 					dv = tuple(map(operator.sub, depV[0], v0))
 					depRelV = 0
@@ -121,7 +129,13 @@ while True:
 					depRelV = math.sqrt(depRelV)
 					depC3 = depRelV**2/1000.0**2
 
-					outData = [ [ windowDay*resFactor, missionDay*resFactor ], round(depC3,1) ]
+					dv = tuple(map(operator.sub, arrV[0], v1))
+					arrRelV = 0
+					for x in dv:
+						arrRelV += x*x
+					arrRelV = math.sqrt(arrRelV)
+
+					outData = [ [ windowDay*resFactor, missionDay*resFactor ], round(depC3,1), round(arrRelV,0)]
 					dataBuf.append(outData)
 
 					calcCounter += 1
